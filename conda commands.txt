@@ -1,0 +1,5 @@
+conda info -e
+conda env list
+conda create --name your_env python=version
+activate your_env  (For Windows)
+source activate your_env (For Linux)
