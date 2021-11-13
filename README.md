@@ -3,20 +3,20 @@
 This repo documents the design and training of the hand-gesture classification model using Tensorflow/Keras.
 
 Project Folder Structure:
-.
-├── data
-│   ├── train
-│   │   ├── fist            # training images belong to class "fist"
-│   │   ├── open_hand       # training images belong to class "open_hand"
-│   ├── valid
-│   │   ├── fist            # validation images belong to class "fist"
-│   │   ├── open_hand       # validation images belong to class "open_hand"
-├── tools
-│   ├── imageDataGenerator_test.py: # just for testing how the augmented images look like.
-│   ├── k2tf_convert.py: # a tool to convert .h5 Keras model into a Tensorflow .pb file which can be deployed to embedded system that runs tensorflow C/C++ library.
-├── train
-│   ├── models   # a folder to store the output: trained model (.h5) and corresponding training metrics plots.
-│   ├── train.py # the source code of the model and training algorithms. inline comments and docstrings for function and modules are embedded.
+. <br>
+├── data <br>
+│   ├── train <br>
+│   │   ├── fist            # training images belong to class "fist" <br>
+│   │   ├── open_hand       # training images belong to class "open_hand" <br>
+│   ├── valid <br>
+│   │   ├── fist            # validation images belong to class "fist" <br>
+│   │   ├── open_hand       # validation images belong to class "open_hand" <br>
+├── tools <br>
+│   ├── imageDataGenerator_test.py: # just for testing how the augmented images look like. <br>
+│   ├── k2tf_convert.py: # a tool to convert .h5 Keras model into a Tensorflow .pb file which can be deployed to embedded system that runs tensorflow C/C++ library. <br>
+├── train <br>
+│   ├── models   # a folder to store the output: trained model (.h5) and corresponding training metrics plots. <br>
+│   ├── train.py # the source code of the model and training algorithms. inline comments and docstrings for function and modules are embedded. <br>
 ├── README.md    # This file. it serves as the project-level documentation.
 
 ### Data preparation:
