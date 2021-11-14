@@ -1,0 +1,7 @@
+class,train/test,number,correct,accuracy,fist,open_hand
+fist,valid,120,119,0.9916666666666667,119.0,1.0
+open_hand,valid,120,120,1.0,0.0,120.0
+fist,train,716,716,1.0,716.0,0.0
+open_hand,train,716,716,1.0,0.0,716.0
+total,both,1672,1671,0.9994019138755981,835.0,837.0
+precison,---,---,---,---,1.0,0.998805256869773
