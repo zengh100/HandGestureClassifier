@@ -18,6 +18,13 @@ import pandas as pd
 
 import yaml
 
+from preprocessing import (
+    read_img_from_path,
+    resize_img,
+    read_from_file,
+)
+from util import download_model
+
 # How to run this script
 # python ./predict.py
 #
@@ -51,18 +58,33 @@ def load_keras(filename):
     from keras.preprocessing import image
     img_width, img_height = 46, 46
     img = image.load_img(filename, target_size = (img_width, img_height), color_mode='grayscale')
+    # After keras.preprocessing.image.load_img(), the img is of type <class 'PIL.Image.Image'>, and it doesn't support the use of .shape
+    # but it can be converted to numpy.ndarray
+    # print("type of image from   keras.preprocessing.image.load_img = ", type(img))
+    #print("shape of image from   keras.preprocessing.image.load_img = ", img.shape) #not supported to use .shape
     img = image.img_to_array(img)
+    # After image.img_to_array(), the img is of type numpy.ndarray, and the shape is 46x46x1
+    #print("shape of image after image.img_to_array = ", img.shape)
+    print("type of image after image.img_to_array = ", type(img))
+    print('image.dtype=', img.dtype)
     img /= 255.0
     img = np.expand_dims(img, axis = 0)
-    #print(img.shape)
+    # After np.expand_dims(img, axis = 0), img has a shape of (1, 46, 46, 1)
+    # print("shape of image after np.expand_dims(img, axis = 0) = ", img.shape)
+
+    print("max value = ", img.max())
+    print("min value = ", img.min())
+    print('image.dtype=', img.dtype)
+
     return img
 
 class ImagePredictor:
     def __init__(
-        self, model_path, resize_size, targets, pre_processing_function=preprocess_input
+        self, model_path, resize_size, targets#, pre_processing_function=preprocess_input
     ):
         self.model_path = model_path
-        self.pre_processing_function = pre_processing_function
+        #self.pre_processing_function = pre_processing_function
+        print("Loading model from file: ", self.model_path)
         self.model = keras.models.load_model(self.model_path)
         self.resize_size = resize_size
         self.targets = targets
@@ -84,14 +106,38 @@ class ImagePredictor:
             config["model_url"], config["model_path"], config["model_sha256"]
         )
         return cls.init_from_config_path(config_path)
+    
     def predict_from_array(self, arr):
         arr = resize_img(arr, h=self.resize_size[0], w=self.resize_size[1])
-        arr = self.pre_processing_function(arr)
-        pred = self.model.predict(arr[np.newaxis, ...]).ravel().tolist()
+        # print('image_after_resize.shape=', arr.shape)
+        # print("type of image_after_resize=", type(arr)  )
+        # print("dtype of image_after_resize=", arr.dtype  )
+        #arr = self.pre_processing_function(arr)
+        #arr = np.float32(arr) # not necessary here since the image was read astype(np.float32)
+        arr /= 255.0 # This is allowed since it is float32 dtype
+        # print("dtype of image_after_resize=", arr.dtype  )
+        # print("max value = ", arr.max())
+        # print("min value = ", arr.min())
+        # The model requires shape of (n,46,46,1)
+        arr = arr[np.newaxis, ..., np.newaxis] # This makes shape of (1,46,46,1)
+        #print('image_before_predict.shape=', arr.shape)
+        pred = self.model.predict(arr)
+        #print("pred=", pred)
+        pred = pred.ravel().tolist()
+        #print("pred_converted =", pred)
         pred = [round(x, 3) for x in pred]
         return {k: v for k, v in zip(self.targets, pred)}
-    def predict_from_file(self, file_object):
+
+    def predict_from_file(self, file_object): #This is for url file
         arr = read_from_file(file_object)
+        return self.predict_from_array(arr)
+
+    def predict_from_path(self, path):
+        arr = read_img_from_path(path)
+        print('image_from_path.shape=', arr.shape)
+        print('image_from_path.type=', type(arr))
+        print('image_from_path.dtype=', arr.dtype)
+
         return self.predict_from_array(arr)
 
 def predict_examples():
@@ -125,135 +171,33 @@ def predict_examples():
     class_prob = model.predict(image_concatenated)
     print(class_prob)
 
-def predict_folder(model, image_folder, label_index, num_class):
-    #search sub-folder
-    search_results = glob.glob(image_folder+'*.png')
-    if len(search_results) == 0: 
-        print('No image found!')
-
-    N = len(search_results)
-    print("searched search_results=", N)
-    
-    correct_dict = {'fist':0, 'open_hand':0}
-
-    predict_list = [0]*num_class
-    for index,filename in enumerate(search_results):
-        image = load_keras(filename)
-        class_prob = model.predict(image)
-        #print(class_prob[0])
-        ind = np.unravel_index(np.argmax(class_prob[0], axis=None), class_prob[0].shape)
-        #print('detected class inex is ', ind[0])
-        predict_list[ind[0]] += 1
-
-        #result = np.where(class_prob[0] == np.amax(class_prob[0]))
-        #print('detected class inex is ', result[0][0])
-
-        '''       
-        if(class_prob[0,label_index] > 0.5): 
-            correct[index] += 1
-        else:
-            print(index, filename)
-            print(class_prob)
-        '''
-    print(f"Accuracy = {predict_list[label_index]/N} : {int(predict_list[label_index])}/{N}.")
-    return predict_list,N
-
-
 if __name__ == "__main__":
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     tf.keras.backend.set_session(tf.Session(config=config))
-    predict_examples()
+    #predict_examples()
 
-    exit()
-
-    data_folder = './data/'
+    print('------------------------------------')
+    print("Use of class ImagePredictor - predict_from_path")
     model_folder = './train/models/'    
-    model_filepath =  model_folder + 'weights.min.val_loss.hdf5'
-    #model_filepath =  model_folder + 'batch=128_epoch=500_dense=128.h5'
-    #model_filepath =  model_folder + 'batch=128_epoch=1000_dense=128.h5'
-    #model_filepath =  model_folder + 'batch=128_epoch=1000_dense=128_scale=2500.h5'
-    #model_filepath =  model_folder + 'batch=128_epoch=1000_dense=128_scale=255.h5'
+    model_filepath =  model_folder + 'weights.min.val_loss.hdf5'  
+    targets = ["fist", "open_hand"]
+    predictor = ImagePredictor(model_filepath, (46,46), targets)
 
-    # Load model from previously saved model file fromtraining
-    print(f'loading... model from {model_filepath}')
-    model = keras.models.load_model(model_filepath) # load from the best saved model
+    predictor_config_path = "config.yaml"
+    predictor.init_from_config_path(predictor_config_path)
 
-    statistics_list = []
+    image_folder = './data/valid/open_hand/'
+    image_filepath = image_folder+'2019.10.04_15.23.01_0007.InfraredFrame_0.png'
+    class_prob = predictor.predict_from_path(image_filepath)
+    print(class_prob)
 
-    targets = ['valid', 'train']
-    labels=['fist', 'open_hand']
-    for index, target in enumerate(targets):
-        labels = get_subDirList(data_folder+target+'/')
-        print('labels=', labels)
-        if(index>0):
-            #compare with previous labels
-            if len(labels) != len(last_labels):
-                print("number of classes is different")
-                quit()
-            common = [i for i, j in zip(labels, last_labels) if i == j]
-            if(len(common) != len(labels)):
-                print('number of common subfolders is less: ', common)
-                quit()
-        last_labels = labels
-    
-    column_name = ['class', 'train/test', 'number', 'correct', 'accuracy']
-    column_name += labels
-    print(f'column_name={column_name}')
+    print('------------------------------------')
+    print("Use of class ImagePredictor - predict_from_file ")
+    with open(image_filepath, "rb") as f:
+        class_prob = predictor.predict_from_file(f)
+        print(class_prob)
 
-    total_predict_list = [0]*len(labels)
-    correct_list = [0]*len(labels)
-    total_correct = 0
-    N = 0
-    for target in targets:
-        for index,label in enumerate(labels):        
-            predict_list,N_ = predict_folder(model, data_folder+target+'/'+label+'/',index, len(labels))
-            value = (label, target, N_, predict_list[index], predict_list[index]/N_)
-            value = value + tuple(predict_list)
-            statistics_list.append(value)
-            total_predict_list = [sum(x) for x in zip(total_predict_list, predict_list)]
-            total_correct += predict_list[index]
-            correct_list[index] += predict_list[index]
-            N += N_
 
-    #correct_,N_ = predict_folder('./data_2classes_ir_preprocessed/valid/fist/', 0, 2)
-    '''
-    correct_,N_ = predict_folder(0, './data_2classes_ir_preprocessed/valid/fist/')
-    value = ('fist', 'test', N_, correct_, correct_/N_, correct_, N_-correct_)
-    statistics_list.append(value)
-    correct += correct_
-    N += N_
 
-    correct_,N_ = predict_folder(0, './data_2classes_ir_preprocessed/train/fist/')
-    value = ('fist', 'train', N_, correct_, correct_/N_, correct_, N_-correct_)
-    statistics_list.append(value)
-    correct += correct_
-    N += N_
-    correct_,N_ = predict_folder(1, './data_2classes_ir_preprocessed/valid/open_hand/')
-    value = ('open_hand', 'test', N_, correct_, correct_/N_, N_-correct_, correct_)
-    statistics_list.append(value)
-    correct += correct_
-    N += N_
-    correct_, N_ = predict_folder(1, './data_2classes_ir_preprocessed/train/open_hand/')
-    value = ('open_hand', 'train', N_, correct_, correct_/N_, N_-correct_, correct_)
-    statistics_list.append(value)
-    correct += correct_
-    N += N_
-    print(f"Total Accuracy = {correct/N} : {int(correct)}/{N}.")
 
-    '''
-    value = ('total', 'both', N, total_correct, total_correct/N)
-    value = value + tuple(total_predict_list)
-    statistics_list.append(value)
-
-    #print('\ncorrect_list\n', correct_list)
-    #print('\ntotal_predict_list\n', total_predict_list)
-    precision_list = [i / j for i, j in zip(correct_list, total_predict_list)] 
-    value = ('precison', '---', '---', '---', '---')
-    value = value + tuple(precision_list)
-    statistics_list.append(value)
-
-    stat_df = pd.DataFrame(statistics_list, columns=column_name)
-    output_csv_filename = model_folder + get_filename_noExt(model_filepath) +'_training_stat.csv'
-    print("output_csv_filename=" + output_csv_filename)
-    stat_df.to_csv(output_csv_filename, index = None)

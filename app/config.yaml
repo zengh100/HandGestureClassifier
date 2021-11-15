@@ -1,0 +1,5 @@
+resize_shape: [46, 46]
+targets: ['fist', 'open_hand']
+model_path: "image_classification.hdf5"
+model_url: "https://github.com/zengh100/HandGestureClassifier/releases/download/v0.1/image_classification.hdf5"
+model_sha256: "d5cd9082651faa826cab4562f60e3095502286b5ea64d5b25ba3682b66fbc305"

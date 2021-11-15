@@ -13,7 +13,8 @@ def get_hash(filename):
 
 
 def download_model(url, file_path, file_sha256):
-    if os.path.exists(file_path) and get_hash(file_path) == file_sha256:
-        print("File already exists")
-    else:
-        get_file(origin=url, fname=file_path, cache_dir=".", cache_subdir=""
+    pass
+    # if os.path.exists(file_path) and get_hash(file_path) == file_sha256:
+    #     print("File already exists")
+    # else:
+    #     get_file(origin=url, fname=file_path, cache_dir=".", cache_subdir=""

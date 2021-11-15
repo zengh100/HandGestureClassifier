@@ -25,7 +25,7 @@ pip install pillow
 """
 
 # How to run this script
-# python train/train.py
+# python ./train.py
 #
 def plot_metrics(hist, savefig_filepath):
     """plot post-training metrics and save the plots to a image file.
